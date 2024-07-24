@@ -12,8 +12,39 @@ import matplotlib.pyplot as plt
 import scipy.stats
 import yfinance as yf
 
+
+# Introduction:
+# This script provides classes for pricing European and American options using different methods,
+# such as the Black-Scholes model, Monte Carlo simulations, and the Barone-Adesi Whaley approximation.
+# The classes also include methods for calculating option greeks and fetching historical stock data.
+
+
 class european_option_pricing:
     def __init__(self, ticker, start_date, end_date, duration, price, strike, r = 0.05, type_option = "CALL"):
+        
+        """
+        Initialize the European option pricing class with required parameters.
+        
+        Parameters
+        ----------
+        ticker : str
+            Stock ticker symbol.
+        start_date : str
+            Start date for historical data in 'YYYY-MM-DD' format.
+        end_date : str
+            End date for historical data in 'YYYY-MM-DD' format.
+        duration : float
+            Duration of the option in years.
+        price : float
+            Current stock price.
+        strike : float
+            Strike price of the option.
+        r : float, optional
+            Risk-free interest rate. Default is 0.05.
+        type_option : str, optional
+            Type of option, either "CALL" or "PUT". Default is "CALL".
+        """
+        
         self.ticker = ticker
         self.start_date = start_date
         self.end_date = end_date
@@ -24,10 +55,25 @@ class european_option_pricing:
         self.type_option = type_option
         
     def fetch_data(self):
+        
+        """
+        Fetch historical stock data for the given ticker and date range.
+        
+        Returns
+        -------
+        pandas.Series
+            Adjusted closing prices of the stock.
+            
+        """
         stock_data = yf.download(self.ticker, self.start_date, self.end_date)
         return stock_data['Adj Close']
     
     def calculate_volatility(self):
+        
+        """
+        Calculate annualized volatility of the stock based on historical data.
+        """
+        
         prices = self.fetch_data()
         returns = ((prices-prices.shift(1)) / prices.shift(1)).dropna()
         volatility = returns.std()      # DAILY
@@ -35,6 +81,11 @@ class european_option_pricing:
         self.volatility= self.volatility*np.sqrt(252)
     
     def calculate_drift(self):
+        
+        """
+        Calculate annualized drift (mean return) of the stock based on historical data.
+        """
+        
         prices = self.fetch_data()
         returns = ((prices-prices.shift(1)) / prices.shift(1)).dropna()
         drift = np.mean(returns)
@@ -43,6 +94,16 @@ class european_option_pricing:
 
     
     def black_scholes_model(self):
+        
+        """
+        Calculate the option price using the Black-Scholes model.
+        
+        Returns
+        -------
+        float
+            Option price.
+        """
+        
         self.calculate_volatility()
         self.d1 = (math.log(self.S / self.K) + (self.r + 0.5 * self.volatility ** 2) * self.T) / (self.volatility * math.sqrt(self.T))
         self.d2 = self.d1 - self.volatility * math.sqrt(self.T)
@@ -53,6 +114,16 @@ class european_option_pricing:
         return price
     
     def greeks(self):
+        
+        """
+        Calculate the option greeks: vega, gamma, delta, theta, and rho.
+        
+        Returns
+        -------
+        tuple
+            A tuple containing vega, gamma, delta, theta, and rho.
+        """
+        
         vega = self.S * scipy.stats.norm.pdf(self.d1) * math.sqrt(self.T) / 100  # 1% change in volatility
         gamma = scipy.stats.norm.pdf(self.d1) / (self.S * self.volatility * math.sqrt(self.T))
         if self.type_option == "CALL":
@@ -66,6 +137,21 @@ class european_option_pricing:
         return vega, gamma, delta, theta, rho
 
     def monte_carlo(self, simulation = 200):
+        
+        """
+        Calculate the option price using Monte Carlo simulation.
+        
+        Parameters
+        ----------
+        simulation : int, optional
+            Number of simulation paths (default is 200).
+        
+        Returns
+        -------
+        float
+            Option price based on Monte Carlo simulation.
+        """
+        
         self.calculate_drift()
         self.calculate_volatility()
         n = 252 * self.T
@@ -86,6 +172,30 @@ class european_option_pricing:
         
 class american_option_pricing:
     def __init__(self, ticker, start_date, end_date, duration, price, strike, r = 0.05, type_option = "CALL"):
+        
+        """
+        Initialize the American option pricing class with required parameters.
+
+        Parameters
+        ----------
+        ticker : str
+            Stock ticker symbol.
+        start_date : str
+            Start date for historical data in 'YYYY-MM-DD' format.
+        end_date : str
+            End date for historical data in 'YYYY-MM-DD' format.
+        duration : float
+            Duration of the option in years.
+        price : float
+            Current stock price.
+        strike : float
+            Strike price of the option.
+        r : float, optional
+            Risk-free interest rate. Default is 0.05.
+        type_option : str, optional
+            Type of option, either "CALL" or "PUT". Default is "CALL".
+        """
+        
         self.ticker = ticker
         self.start_date = start_date
         self.end_date = end_date
@@ -96,10 +206,25 @@ class american_option_pricing:
         self.type_option = type_option
         
     def fetch_data(self):
+        
+        """
+        Fetch historical stock data for the given ticker and date range.
+        
+        Returns
+        -------
+        pandas.Series
+            Adjusted closing prices of the stock.
+        """
+        
         stock_data = yf.download(self.ticker, self.start_date, self.end_date)
         return stock_data['Adj Close']
         
     def calculate_volatility(self):
+        
+        """
+        Calculate annualized volatility of the stock based on historical data.
+        """
+        
         prices = self.fetch_data()
         returns = ((prices-prices.shift(1)) / prices.shift(1)).dropna()
         volatility = returns.std()      # DAILY
@@ -107,6 +232,11 @@ class american_option_pricing:
         self.volatility= self.volatility*np.sqrt(252)
         
     def calculate_drift(self):
+        
+        """
+        Calculate annualized drift (mean return) of the stock based on historical data.
+        """
+        
         prices = self.fetch_data()
         returns = ((prices-prices.shift(1)) / prices.shift(1)).dropna()
         drift = np.mean(returns)
@@ -114,6 +244,16 @@ class american_option_pricing:
         self.drift = self.drift*252
         
     def barone_adesi_whaley(self):
+        
+        """
+        Calculate the American option price using the Barone-Adesi Whaley model.
+        
+        Returns
+        -------
+        float
+            American option price.
+        """
+        
         underlying = european_option_pricing(self.ticker, self.start_date, self.end_date, self.T, self.S, self.K) 
         european_price = underlying.black_scholes_model()
         self.calculate_drift()
